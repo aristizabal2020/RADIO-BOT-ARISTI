@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Partials, Events, Collection } = require("discord.js");
+const { Client, GatewayIntentBits, Partials, Events, Collection, ActivityType } = require("discord.js");
 const { createAudioResource,
   createAudioPlayer,
   joinVoiceChannel,
@@ -9,12 +9,16 @@ const { createAudioResource,
 
 require("dotenv").config();
 
-const mongoose = require('mongoose');
+const saveGuild = require("./models/guilds");
 
-const { Prefix, RadioStreamURL } = require('./config.json');
+let { playRadio } = require("./commands/utility/join");
+const { createGuild } = require("./controllers/createGuild");
+
+const mongoose = require('mongoose');
 
 const fs = require('node:fs');
 const path = require('node:path');
+const { channel } = require("node:diagnostics_channel");
 
 
 const client = new Client({
@@ -30,34 +34,35 @@ const client = new Client({
 
 //conectar base de datos
 mongoose
-.connect(process.env.MONGO_DB_TOKEN, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
-})
-.then(() =>{
-  console.log("Conectado a MongoDB");
-})
-.catch((err) =>{
-  console.log=(err);
-});
+  .connect(process.env.MONGO_DB_TOKEN, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+    autoIndex: true
+  })
+  .then(() => {
+    console.log("Conectado a MongoDB");
+  })
+  .catch((err) => {
+    console.log(err);
+  });
 
 client.commands = new Collection();
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
 
 for (const folder of commandFolders) {
-	const commandsPath = path.join(foldersPath, folder);
-	const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
-	for (const file of commandFiles) {
-		const filePath = path.join(commandsPath, file);
-		const command = require(filePath);
-		// Set a new item in the Collection with the key as the command name and the value as the exported module
-		if ('data' in command && 'execute' in command) {
-			client.commands.set(command.data.name, command);
-		} else {
-			console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
-		}
-	}
+  const commandsPath = path.join(foldersPath, folder);
+  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+  for (const file of commandFiles) {
+    const filePath = path.join(commandsPath, file);
+    const command = require(filePath);
+    // Set a new item in the Collection with the key as the command name and the value as the exported module
+    if ('data' in command && 'execute' in command) {
+      client.commands.set(command.data.name, command);
+    } else {
+      console.log(`[WARNING] The command at ${filePath} is missing a required "data" or "execute" property.`);
+    }
+  }
 }
 
 let guild;
@@ -71,103 +76,77 @@ const player = createAudioPlayer({
   },
 });
 
-// client.on('ready', async () => {
+//evento Nuevo Guild
+client.on(Events.GuildCreate, async guild => {
 
-//   guild = await client.guilds.fetch(process.env.GUILD_ID);
+  guild = guild;
 
-//   console.log(`Bot conectado como ${client.user.tag}`);
+  let Guild = await saveGuild.findOne({ guildId: guild.id });
 
-//   // playRadio();
+  if(!Guild){
+    
+    Guild = createGuild(guild);
 
-// });
+  }
 
+  console.log("Guild evento create: ", Guild.guildName);
+
+});
+
+//evento del bot conectado y listo!
 client.once(Events.ClientReady, async c => {
 
-	guild = await client.guilds.fetch(process.env.GUILD_ID);
-
   console.log(`Bot conectado como ${c.user.tag}`);
+  console.log(`${c.guilds.cache.size} Servidores`);
 
-	c.user.setPresence({ activities: [{ name: '426FM' }], status: 'online' });
+  c.user.setPresence({ activities: [{ name: '426FM', type: ActivityType.Streaming }], status: 'online' });
 });
 
-client.on(Events.GuildCreate, guild => {
-
-  // Obtén el ID de la guild recién agregada
-
-  guild = guild.id;
-
-  console.log(`El bot se ha unido a la guild con ID: ${guild}`);
-
-});
-
-// client.on('messageCreate', async (message) => {
-
-//   if (!message.content.startsWith(Prefix) || message.author.bot) return;
-
-//   const args = message.content.slice(Prefix.length).trim().split(/ +/);
-//   const command = args.shift().toLowerCase();
-
-//   if (command === 'join') {
-//     if (!message.member.voice.channel) {
-//       return message.reply('Debes unirte a un canal de voz primero.');
-//     }
-
-//     playRadio();
-//     connected = true;
-
-//     console.log("Radio On")
-
-//     message.reply('Radio on.');
-
-//   }
-//   //Comando STOP
-//   else if (command === 'stop') {
-//     try {
-//       if (!connected) { return message.reply("You have already disconnected") };
-
-//       stopRadioStream();
-
-//       message.reply('Radio off.');
-
-//     } catch (error) {
-
-//       console.error(error);
-//       message.reply('Ocurrió un error al detener la transmisión de radio.');
-
-//     }
-//   }
-// });
-
+//evento interaction creada
 client.on(Events.InteractionCreate, async interaction => {
 
-	// const channelId = interaction.channelId;
-	// if (channelId !== '1112547639397994560') return;
+  if (!interaction.isChatInputCommand()) return;
+  
+  const command = interaction.client.commands.get(interaction.commandName);
+  
+  guild = interaction.guild;
 
-	if (!interaction.isChatInputCommand()) return;
+  let Guild = await saveGuild.findOne({ guildId: interaction.guildId });
 
-	const command = interaction.client.commands.get(interaction.commandName);
+  if(!Guild){
 
-	if (!command) {
-		console.error(`No command matching ${interaction.commandName} was found.`);
-		return;
-	}
+    Guild = createGuild(interaction.guild);
 
-	try {
+  }
+  
+  const roles = interaction.member.roles.cache;
 
-		await command.execute(interaction, client, player, guild);
-		// await interaction.channel.send('https://cdn.discordapp.com/attachments/1109263433871921203/1110488827367272499/DEATH_SHOT.png')
+  const roleIds = roles.map(role => role.id);
 
-	} catch (error) {
-		console.error(error);
-		if (interaction.replied || interaction.deferred) {
-			await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
-		} else {
-			await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
-		}
-	}
+  if(!roleIds.includes(Guild.roleAdminId) && Guild.roleAdminId ) return;
+  
+  // Obtén los IDs de los roles
+  // const channelId = interaction.channelId;
+  // if (channelId !== '1112547639397994560') return;
+
+  if (!command) {
+    console.error(`No command matching ${interaction.commandName} was found.`);
+    return;
+  }
+
+  try {
+
+    await command.execute(interaction, client, player);
+
+  } catch (error) {
+    console.error(error);
+    if (interaction.replied || interaction.deferred) {
+      await interaction.followUp({ content: 'There was an error while executing this command!', ephemeral: true });
+    } else {
+      await interaction.reply({ content: 'There was an error while executing this command!', ephemeral: true });
+    }
+  }
 });
-
-
 
 // client.on("voiceStateUpdate", async (oldState, newState) => {
 //   if (oldState.member.user.bot || newState.member.user.bot) return;
@@ -224,9 +203,11 @@ player.on(AudioPlayerStatus.Idle, async () => {
 
   try {
 
-    playRadio();
+    const Guild = await saveGuild.findOne({ guildId: guild.id });
 
     console.log('Reiniciando stream ausente');
+
+    playRadio(Guild.channelId, guild, player);
 
   } catch (error) {
     console.log(error);
@@ -235,60 +216,62 @@ player.on(AudioPlayerStatus.Idle, async () => {
 
 
 
-async function playRadio() {
+// async function playRadio() {
 
-  try {
+//   try {
 
-    connected = true;
+//     connected = true;
 
-    connection = joinVoiceChannel({
-      channelId: '945430997875445794',
-      guildId: guild.id,
-      adapterCreator: guild.voiceAdapterCreator,
-    });
+//     connection = joinVoiceChannel({
+//       channelId: '945430997875445794',
+//       guildId: guild.id,
+//       adapterCreator: guild.voiceAdapterCreator,
+//     });
 
-    // Crear el recurso de audio con la URL de la radio
-    const resource = createAudioResource(RadioStreamURL);
+//     // Crear el recurso de audio con la URL de la radio
+//     const resource = createAudioResource(RadioStreamURL);
 
-    // Reproducir el audio
-    connection.subscribe(player);
-    player.play(resource);
+//     // Reproducir el audio
+//     connection.subscribe(player);
+//     player.play(resource);
 
-    // Evento para verificar si el reproductor ha terminado de reproducir el audio
-    connection.on('error', (error) => {
-      console.error('Error al reproducir el audio:', error);
-    });
+//     // Evento para verificar si el reproductor ha terminado de reproducir el audio
+//     connection.on('error', (error) => {
+//       console.error('Error al reproducir el audio:', error);
+//     });
 
-  } catch (error) {
+//   } catch (error) {
 
-    console.log(error);
+//     console.log(error);
 
-  }
-}
+//   }
+// }
 
-function stopRadioStream() {
+// function stopRadioStream() {
 
-  try {
+//   try {
 
-    connected = false;
+//     connected = false;
 
-    connection = joinVoiceChannel({
-      channelId: '945430997875445794',
-      guildId: guild.id,
-      adapterCreator: guild.voiceAdapterCreator,
-    });
+//     connection = joinVoiceChannel({
+//       channelId: '945430997875445794',
+//       guildId: guild.id,
+//       adapterCreator: guild.voiceAdapterCreator,
+//     });
 
-    console.log(connection);
+//     console.log(connection);
 
-    connection.destroy();
-    // player.stop();
-    console.log("Music stopped.");
+//     connection.destroy();
 
-  } catch (error) {
+//   } catch (error) {
 
-    console.error("Error stopping radio stream:", error);
-    
-  }
-}
+//     console.error("Error stopping radio stream:", error);
+
+//   }
+// }
 
 client.login(process.env.TOKEN_BOT);
+
+
+//enlace de invitacion del bot
+//https://discord.com/api/oauth2/authorize?client_id=1115083732542558230&permissions=2150631424&scope=bot
