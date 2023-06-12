@@ -52,6 +52,10 @@ module.exports = {
 
             const channelName = await interaction.options.getChannel('channel');
 
+            if(!channelName){
+                return interaction.reply(`Please select a voice channel first!`);
+            }
+
             const guildUpdated = await updateGuild.findOneAndUpdate(
                 { guildId: interaction.guildId },
                 {

@@ -8,6 +8,7 @@ const guild = new Schema({
     guildDescription: {type: String, default: '', required: false},
     ownerGuildId: {type: String, required: true},
     roleAdminId: {type: String, required: false},
+    isActivated: {type: Boolean, required: false},
     guildCreatedAt: {type: Date, required: false},
     timestamp: { type: Date, default: Date.now },
 });

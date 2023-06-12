@@ -13,6 +13,7 @@ async function createGuild(guild, channel) {
       memberCount: guild.memberCount,
       guildDescription: guild.description,
       ownerGuildId: guild.ownerId,
+      isActivated: true,
       guildCreatedAt: guild.createdTimestamp
     });
 
@@ -36,10 +37,10 @@ async function createGuild(guild, channel) {
         memberCount: guild.memberCount,
         guildDescription: guild.description,
         ownerGuildId: guild.ownerId,
+        isActivated: true,
         timestamp: Date.now(),
       });
-
-      console.log(`El bot ha actualizado la guild: ${guild.name} con ${guild.memberCount} usuarios.`);
+      console.log("Guild actualizada: ", guild.name)
 
   }
 

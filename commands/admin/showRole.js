@@ -18,6 +18,12 @@ module.exports = {
             const role = await interaction.options.getRole('role');
 
             const getGuild = await getGuildId.findOne({ guildId: interaction.guildId });
+
+            if(!getGuild.roleAdminId){
+
+                return interaction.reply(`Please set a role first!`);
+
+            }
             const roleId = interaction.guild.roles.cache.get(getGuild.roleAdminId).id;
               
             switch (interaction.locale) {
@@ -33,7 +39,7 @@ module.exports = {
                     break;
                 case 'pt-BR':
 
-                    await interaction.reply(`papel seleccionado ${role}`);
+                    await interaction.reply(`Papel seleccionado ${role}`);
 
                     break;
                 default:

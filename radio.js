@@ -12,6 +12,7 @@ require("dotenv").config();
 const saveGuild = require("./models/guilds");
 
 let { playRadio } = require("./commands/utility/join");
+
 const { createGuild } = require("./controllers/createGuild");
 
 const mongoose = require('mongoose');
@@ -66,8 +67,7 @@ for (const folder of commandFolders) {
 }
 
 let guild;
-let connection;
-let connected = false;
+let connected;
 
 // Crear el reproductor de audio
 const player = createAudioPlayer({
@@ -81,15 +81,24 @@ client.on(Events.GuildCreate, async guild => {
 
   guild = guild;
 
-  let Guild = await saveGuild.findOne({ guildId: guild.id });
+  const Guild = await saveGuild.findOne({ guildId: guild.id });    
 
-  if(!Guild){
-    
-    Guild = createGuild(guild);
+    createGuild(guild);
 
-  }
+  console.log("Guild evento create: ", guild.name);
 
-  console.log("Guild evento create: ", Guild.guildName);
+});
+
+//evento Guild abandona
+client.on(Events.GuildDelete, async guild => {   
+
+  const guildUpdated = await saveGuild.findOneAndUpdate(
+    { guildId: guild.id },
+    {
+      isActivated: false
+    });
+
+  console.log("Guild evento delete: ", guild.name);
 
 });
 
@@ -99,7 +108,7 @@ client.once(Events.ClientReady, async c => {
   console.log(`Bot conectado como ${c.user.tag}`);
   console.log(`${c.guilds.cache.size} Servidores`);
 
-  c.user.setPresence({ activities: [{ name: '426FM', type: ActivityType.Streaming }], status: 'online' });
+  c.user.setPresence({ activities: [{ name: '426FM.com', type: ActivityType.Listening }], status: 'dnd' });
 });
 
 //evento interaction creada
@@ -124,10 +133,6 @@ client.on(Events.InteractionCreate, async interaction => {
   const roleIds = roles.map(role => role.id);
 
   if(!roleIds.includes(Guild.roleAdminId) && Guild.roleAdminId ) return;
-  
-  // Obtén los IDs de los roles
-  // const channelId = interaction.channelId;
-  // if (channelId !== '1112547639397994560') return;
 
   if (!command) {
     console.error(`No command matching ${interaction.commandName} was found.`);
@@ -135,6 +140,9 @@ client.on(Events.InteractionCreate, async interaction => {
   }
 
   try {
+
+    if( command.data.name === 'join') {connected = true};
+    if( command.data.name === 'stop') {connected = false};
 
     await command.execute(interaction, client, player);
 
@@ -203,9 +211,9 @@ player.on(AudioPlayerStatus.Idle, async () => {
 
   try {
 
-    const Guild = await saveGuild.findOne({ guildId: guild.id });
+    if(!connected) return;
 
-    console.log('Reiniciando stream ausente');
+    const Guild = await saveGuild.findOne({ guildId: guild.id });
 
     playRadio(Guild.channelId, guild, player);
 

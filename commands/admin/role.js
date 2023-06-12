@@ -45,7 +45,7 @@ module.exports = {
                     break;
                 case 'pt-BR':
 
-                    await interaction.reply(`papel seleccionado ${role}`);
+                    await interaction.reply(`Papel seleccionado ${role}`);
 
                     break;
                 default:
