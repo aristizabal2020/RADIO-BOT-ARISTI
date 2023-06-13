@@ -9,11 +9,11 @@ const getGuildId = require("../../models/guilds");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('role')
-        .setDescription('Role admin!')
+        .setDescription('Set the role that will have privileges to use the bot')
         .addRoleOption(option =>
             option
                 .setName('role')
-                .setDescription('Add admin role')
+                .setDescription('Set which role will be considered DJ!')
                 .setRequired(true)
         ),
 

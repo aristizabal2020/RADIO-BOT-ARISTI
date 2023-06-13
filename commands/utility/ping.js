@@ -10,7 +10,7 @@ module.exports = {
         try{
             switch (interaction.locale){
                 case 'en-US':
-                    await interaction.reply(`My ping is **${client.ws.ping} ms en ${interaction.member.joinedAt}**`);
+                    await interaction.reply(`My ping is **${client.ws.ping} ms** `);
                     break;
                 case 'es-ES':
                     await interaction.reply(`Mi ping es de **${client.ws.ping} ms**`);
