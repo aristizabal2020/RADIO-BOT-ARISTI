@@ -12,7 +12,7 @@ require("dotenv").config();
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('stop')
-        .setDescription('Stop the radio!'),
+        .setDescription('Stops the radio.'),
 
     async execute(interaction, client, player) {
 

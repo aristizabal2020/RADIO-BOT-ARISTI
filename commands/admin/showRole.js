@@ -9,7 +9,7 @@ const getGuildId = require("../../models/guilds");
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('show-role')
-        .setDescription('shows the role you have configured as bot administrator!'),
+        .setDescription('Shows the role you have configured as bot administrator.'),
 
     async execute(interaction, client, player) {
 

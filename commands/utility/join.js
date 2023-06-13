@@ -14,7 +14,7 @@ require("dotenv").config();
 module.exports = {
     data: new SlashCommandBuilder()
         .setName('join')
-        .setDescription('Set channel and plays!')
+        .setDescription('Sets channel and plays.')
         .addChannelOption(option =>
             option.setName('channel')
                 .setDescription('🔊 The channel to join')
