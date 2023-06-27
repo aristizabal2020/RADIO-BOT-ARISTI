@@ -21,9 +21,11 @@ module.exports = {
                 .addChannelTypes(ChannelType.GuildVoice)
         ),
 
-    playRadio: (channel, guild, player) => {
+    playRadio: async (guild, player) => {
 
         try {
+            const Guild = await updateGuild.findOne({ guildId: guild.id });
+            const channel = Guild.channelId;
 
             const connection = createVoiceConnection(channel, guild);
 
@@ -65,17 +67,15 @@ module.exports = {
                 //todo: borrar
                 // console.log("Actualizado el canal: ", guildUpdated.channelId)
 
+                this.playRadio(interaction.guild, player);
             switch (interaction.locale) {
                 case 'en-US':
 
-                    this.playRadio(channelName.id, interaction.guild, player);
 
                     await interaction.reply(`Radio On ${channelName}`);
 
                     break;
                 case 'es-ES':
-
-                    this.playRadio(channelName.id, interaction.guild, player);
 
                     await interaction.reply(`Radio encendida en: ${channelName}`);
 

@@ -75,28 +75,28 @@ const player = createAudioPlayer({
 });
 
 //Evento Nuevo Guild
-client.on(Events.GuildCreate, async guild => {
+client.on(Events.GuildCreate, async guildCreate => {
 
-  guild = guild;
+  guild = guildCreate;
 
-  const Guild = await saveGuild.findOne({ guildId: guild.id });    
+  const Guild = await saveGuild.findOne({ guildId: guildCreate.id });    
 
-    createGuild(guild);
+    createGuild(guildCreate);
 
-  console.log("Guild evento create: ", guild.name);
+  console.log("Guild evento create: ", guildCreate.name);
 
 });
 
 //evento Guild abandona
-client.on(Events.GuildDelete, async guild => {   
+client.on(Events.GuildDelete, async guildDelete => {   
 
   const guildUpdated = await saveGuild.findOneAndUpdate(
-    { guildId: guild.id },
+    { guildId: guildDelete.id },
     {
       isActivated: false
     });
 
-  console.log("Guild evento delete: ", guild.name);
+  console.log("Guild evento delete: ", guildDelete.name);
 
 });
 
@@ -109,15 +109,18 @@ client.once(Events.ClientReady, async c => {
   c.user.setPresence({ activities: [{ name: '426FM.com', type: ActivityType.Listening }], status: 'online' });
 
   //arranca automáticamente el bot si está en un canal de voz después de un reinicio
-  client.guilds.cache.forEach((guild) => {
-    const botVoiceState = guild.voiceStates.cache.get(client.user.id);
+  c.guilds.cache.forEach((guildSearched) => {
+
+    const botVoiceState = guildSearched.voiceStates.cache.get(client.user.id);
     if (botVoiceState && botVoiceState.channel) {
-      const channelId = botVoiceState.channel.id;
-      const guild = botVoiceState.channel.guild;
-      playRadio(channelId, guild, player);
-      console.log(`Reproduciento automáticamente en: '${guild.name}'`);
+      // const channelId = botVoiceState.channel.id;
+      connected = true;
+      guild = guildSearched;
+      playRadio(guildSearched, player);
+      console.log(`Reproduciento automáticamente en: '${guildSearched.name}'`);
     } else {
-      console.log(`El bot no está en ningún canal de audio en la guild '${guild.name}'`);
+      guild = guildSearched;
+      console.log(`El bot no está en ningún canal de audio en la guild '${guildSearched.name}'`);
     }
   });
 
@@ -174,11 +177,18 @@ player.on(AudioPlayerStatus.Idle, async () => {
 
   try {
 
+    console.log("entrando ausente")
+
     if(!connected) return;
 
-    const Guild = await saveGuild.findOne({ guildId: guild.id });
+    client.guilds.cache.forEach((guildSearched) => {
+      if (guildSearched.id == guild.id) {
+        console.log("entrando a ausente foreach con condicion")
+        playRadio(guildSearched, player);
+        console.log(`Reproduciendo ausente en: '${guild.name}'`);
+      } 
+    });
 
-    playRadio(Guild.channelId, guild, player);
 
   } catch (error) {
     console.log(error);
