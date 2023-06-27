@@ -176,14 +176,12 @@ client.on(Events.InteractionCreate, async interaction => {
 player.on(AudioPlayerStatus.Idle, async () => {
 
   try {
-
-    console.log("entrando ausente")
+    
 
     if(!connected) return;
 
     client.guilds.cache.forEach((guildSearched) => {
       if (guildSearched.id == guild.id) {
-        console.log("entrando a ausente foreach con condicion")
         playRadio(guildSearched, player);
         console.log(`Reproduciendo ausente en: '${guild.name}'`);
       } 
